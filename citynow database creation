@@ -1,0 +1,129 @@
+from fastapi import FastAPI
+from pymongo import MongoClient
+import pandas as pd
+import matplotlib.pyplot as plt
+from fastapi.responses import FileResponse
+import uvicorn
+
+# Initialize FastAPI application
+app = FastAPI()
+
+# MongoDB connection details
+MONGO_URI = "mongodb+srv://per18044:mEANFqihdP9BPGwt@cluster0.oowe8qv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+DB_NAME = "citynow"
+COLLECTION_NAME = "data"
+
+# Connect to MongoDB
+client = MongoClient(MONGO_URI)
+db = client[DB_NAME]
+collection = db[COLLECTION_NAME]
+
+# Sample demographic data with different Growth Rates
+data_samples = [
+    {
+        "Growth_Rate": 5.5,
+        "Number_of_Houses": 531062,
+        "Occupied_Houses": 502301,
+        "Population": 1306784,
+        "Single_Detached_House": 276050,
+        "One_Person": 132695,
+        "Two_Persons": 159955,
+        "Three_Persons": 80020,
+        "Four_Persons": 79565,
+        "Five_or_More_Persons": 50070,
+        "Average_Household_Size": 2.6,
+        "Semi_Detached_House": 31660,
+        "Row_House": 48860,
+        "Apartment_in_Duplex": 21165,
+        "Apartment_Fewer_than_5_Storeys": 81870,
+        "Apartment_Five_or_More_Storeys": 40700,
+        "Other_Single_Attached_House": 200,
+        "Movable_Dwelling": 1790
+    },
+    {
+        "Growth_Rate": 6.0,
+        "Number_of_Houses": 540000,
+        "Occupied_Houses": 510000,
+        "Population": 1320000,
+        "Single_Detached_House": 280000,
+        "One_Person": 135000,
+        "Two_Persons": 160000,
+        "Three_Persons": 80500,
+        "Four_Persons": 80000,
+        "Five_or_More_Persons": 50500,
+        "Average_Household_Size": 2.65,
+        "Semi_Detached_House": 32000,
+        "Row_House": 49000,
+        "Apartment_in_Duplex": 21500,
+        "Apartment_Fewer_than_5_Storeys": 82000,
+        "Apartment_Five_or_More_Storeys": 41000,
+        "Other_Single_Attached_House": 210,
+        "Movable_Dwelling": 1800
+    },
+    {
+        "Growth_Rate": 6.5,
+        "Number_of_Houses": 550000,
+        "Occupied_Houses": 520000,
+        "Population": 1350000,
+        "Single_Detached_House": 285000,
+        "One_Person": 140000,
+        "Two_Persons": 162000,
+        "Three_Persons": 81000,
+        "Four_Persons": 81000,
+        "Five_or_More_Persons": 51000,
+        "Average_Household_Size": 2.7,
+        "Semi_Detached_House": 32500,
+        "Row_House": 49500,
+        "Apartment_in_Duplex": 22000,
+        "Apartment_Fewer_than_5_Storeys": 83000,
+        "Apartment_Five_or_More_Storeys": 42000,
+        "Other_Single_Attached_House": 220,
+        "Movable_Dwelling": 1850
+    }
+]
+
+# Endpoint to insert data samples into MongoDB
+@app.get("/insert_data_samples")
+def insert_data_samples():
+    collection.insert_many(data_samples)
+    return {"message": "Data samples inserted successfully"}
+
+# Endpoint to analyze and visualize data for different Growth Rates
+@app.get("/analyze_data")
+def analyze_data():
+    documents = list(collection.find({}, {"_id": 0}))
+    if documents:
+        df = pd.DataFrame(documents)
+
+        # Plot each growth rate as a separate bar chart
+        plt.figure(figsize=(12, 10))
+        
+        for i, growth_rate in enumerate(df['Growth_Rate'].unique()):
+            subset = df[df['Growth_Rate'] == growth_rate]
+            housing_types = [
+                "Single_Detached_House", "Semi_Detached_House", "Row_House", 
+                "Apartment_in_Duplex", "Apartment_Fewer_than_5_Storeys", 
+                "Apartment_Five_or_More_Storeys", "Other_Single_Attached_House", 
+                "Movable_Dwelling"
+            ]
+            housing_counts = [subset[type_].values[0] for type_ in housing_types]
+            
+            # Create subplot for each growth rate
+            plt.subplot(3, 1, i+1)
+            plt.bar(housing_types, housing_counts)
+            plt.title(f"Housing Types in Calgary (Growth Rate: {growth_rate}%)")
+            plt.xlabel("Housing Type")
+            plt.ylabel("Count")
+            plt.xticks(rotation=45)
+        
+        plt.tight_layout()
+        plt.savefig("calgary_housing_growth_rates2.png")
+        plt.close()  # Close the plot to release memory
+
+        return FileResponse("calgary_housing_growth_rates.png", media_type="image/png", filename="calgary_housing_growth_rates.png")
+    else:
+        return {"error": "No data available"}
+
+# Run the application
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
