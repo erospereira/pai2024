@@ -1,0 +1,93 @@
+import urllib.request
+import json
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+
+API_URL = 'https://data.calgary.ca/resource/fm6w-acnx.json'
+
+def fetch_population_data(api_url):
+    try:
+        with urllib.request.urlopen(api_url) as response:
+            if response.status != 200:
+                print(f"Error: HTTP status code {response.status}")
+                return None
+            contents = response.read().decode(response.headers.get_content_charset() or 'utf-8')
+            if not contents.strip():
+                print("Error: Received empty response from the server")
+                return None
+            data = json.loads(contents)
+            return data
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+    return None
+
+def generate_mock_data(num_rows=100):
+    np.random.seed(42)
+    data = {
+        "year": np.random.randint(2000, 2024, num_rows),
+        "total_pop_household": np.random.randint(100000, 1500000, num_rows),
+        "pop_age_0_to_14": np.random.randint(20000, 300000, num_rows),
+        "pop_age_15_to_64": np.random.randint(500000, 1200000, num_rows),
+        "pop_age_65_to_84": np.random.randint(50000, 200000, num_rows),
+        "pop_age_85_and_over": np.random.randint(5000, 20000, num_rows)
+    }
+    return pd.DataFrame(data)
+
+def preprocess_data(data):
+    df = pd.DataFrame(data)
+    required_columns = ['year', 'total_pop_household', 'pop_age_0_to_14', 'pop_age_15_to_64', 'pop_age_65_to_84', 'pop_age_85_and_over']
+    missing_columns = set(required_columns) - set(df.columns)
+    
+    if missing_columns:
+        print(f"Required columns are missing from the data: {missing_columns}. Generating mock data...")
+        df = generate_mock_data(num_rows=100)
+
+    for col in required_columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    df.dropna(subset=required_columns, inplace=True)
+    
+    if df.empty:
+        print("Insufficient data after preprocessing.")
+        return None
+    
+    features = df.drop(columns=['year', 'total_pop_household'])
+    target = df['total_pop_household']
+    
+    scaler = StandardScaler()
+    features = pd.DataFrame(scaler.fit_transform(features), columns=features.columns)
+    return features, target
+
+def build_model(input_shape):
+    model = Sequential([
+        Dense(64, activation='relu', input_shape=(input_shape,)),
+        Dense(32, activation='relu'),
+        Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    return model
+
+data = fetch_population_data(API_URL)
+
+if data:
+    print("Data successfully retrieved.")
+else:
+    print("Failed to retrieve data. Generating mock data...")
+    data = generate_mock_data(num_rows=100)
+
+features, target = preprocess_data(data)
+
+if features is not None and target is not None:
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+    model = build_model(X_train.shape[1])
+    early_stop = EarlyStopping(monitor='val_loss', patience=5)
+    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=50, callbacks=[early_stop], verbose=1)
+    test_loss, test_mae = model.evaluate(X_test, y_test)
+    print(f"Test MAE: {test_mae}")
+else:
+    print("Data preprocessing failed due to missing or insufficient data.")
