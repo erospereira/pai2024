@@ -1,0 +1,65 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample crime data (replace this with actual data extraction from the plot or a data file)
+crime_data = pd.DataFrame({
+    'Year': [2018, 2019, 2020, 2021, 2022, 2023, 2024],
+    'Assault_Non_domestic': [60, 65, 70, 80, 85, 78, 75],
+    'Break_Enter_Commercial': [10, 12, 15, 17, 19, 18, 20],
+    'Break_Enter_Dwelling': [5, 6, 7, 8, 10, 9, 8],
+    'Theft_FROM_Vehicle': [30, 35, 40, 45, 55, 50, 48],
+    'Theft_OF_Vehicle': [20, 22, 25, 30, 35, 32, 30],
+    'Violence_Other_Non_domestic': [40, 42, 44, 50, 53, 48, 46],
+    'Street_Robbery': [5, 6, 6, 7, 7, 6, 6],
+    'Commercial_Robbery': [15, 18, 20, 22, 24, 23, 25],
+    'Break_Enter_Other_Premises': [3, 4, 4, 5, 5, 4, 4]
+})
+
+# Prediction for future years (e.g., 2025)
+future_year = 2025
+
+# Initialize dictionary to store predictions
+predictions = {}
+
+# For each crime category, we will create a linear regression model to predict future values
+for column in crime_data.columns[1:]:  # Skip 'Year' column
+    X = crime_data[['Year']]
+    y = crime_data[column]
+    
+    # Split data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    
+    # Train a linear regression model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    
+    # Predict the crime count for the future year
+    future_prediction = model.predict([[future_year]])
+    predictions[column] = future_prediction[0]
+    
+    # Print model accuracy (optional)
+    y_pred = model.predict(X_test)
+    print(f"{column} - MSE:", mean_squared_error(y_test, y_pred))
+
+# Display predictions for each crime category for the year 2025
+print("\nPredicted Crime Counts for 2025:")
+for crime, count in predictions.items():
+    print(f"{crime}: {count:.2f}")
+
+# Visualization of the predictions along with historical data
+plt.figure(figsize=(12, 8))
+
+# Plot historical data and predicted point
+for column in crime_data.columns[1:]:
+    plt.plot(crime_data['Year'], crime_data[column], marker='o', label=column)
+    plt.scatter([future_year], [predictions[column]], color='red')  # Mark prediction with red dot
+
+plt.xlabel('Year')
+plt.ylabel('Crime Count')
+plt.title('Calgary Crime Data and Predictions for 2025')
+plt.legend()
+plt.show()
