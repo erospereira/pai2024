@@ -1,0 +1,47 @@
+import urllib.request
+import json
+import matplotlib.pyplot as plt
+from collections import defaultdict
+
+# Define the API URL for Calgary crime data
+API_URL = 'https://data.calgary.ca/resource/78gh-n26t.json?$select=category,crime_count,year,month'
+
+def fetch_crime_data(api_url):
+    # Fetch data from the API
+    contents = urllib.request.urlopen(api_url)
+    data = json.loads(contents.read().decode(contents.headers.get_content_charset()))
+    return data
+
+def process_crime_data(data):
+    # Dictionary to store data by category and year
+    crime_data = defaultdict(lambda: defaultdict(int))
+    
+    # Populate the dictionary with data, aggregating counts by year and category
+    for entry in data:
+        category = entry['category']
+        year = int(entry['year'])
+        count = int(entry['crime_count'])
+        crime_data[category][year] += count  # Aggregate crime count by year
+    
+    return crime_data
+
+def plot_crime_data(crime_data):
+    # Plot each crime category over the years
+    for category, yearly_data in crime_data.items():
+        years = sorted(yearly_data.keys())
+        counts = [yearly_data[year] for year in years]
+        
+        plt.plot(years, counts, marker='o', label=category)
+    
+    plt.xlabel("Year")
+    plt.ylabel("Crime Count")
+    plt.title("Calgary Crime Data by Category")
+    plt.legend()
+    plt.show()
+
+# Fetch and process the data
+data = fetch_crime_data(API_URL)
+crime_data = process_crime_data(data)
+
+# Plot the data
+plot_crime_data(crime_data)
