@@ -1,0 +1,80 @@
+from fastapi import FastAPI
+from pymongo import MongoClient
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+import json
+
+# Initialize FastAPI and MongoDB client
+app = FastAPI()
+client = MongoClient("mongodb+srv://per18044:mEANFqihdP9BPGwt@cluster0.oowe8qv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+db = client["calgaryeconomics"]
+collection = db["economicsdata"]
+
+# Define the endpoint to insert data samples from the JSON file into MongoDB
+@app.post("/insert_data_samples")
+def insert_data_samples():
+    file_path = r"C:\Users\erosp\OneDrive\Desktop\Working\economics.js"
+    
+    # Load JSON data from the file
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    
+    # Insert each entry as a document in MongoDB
+    for entry in data:
+        entry['date'] = pd.to_datetime(entry['date'])
+        collection.update_one({"date": entry['date']}, {"$set": entry}, upsert=True)
+    
+    return {"message": "Data samples inserted successfully"}
+
+# Define the endpoint to analyze the data and generate visualizations
+@app.get("/analyze_data")
+def analyze_data():
+    # Query data from MongoDB for the specified date range
+    data = list(collection.find({
+        "date": {
+            "$gte": datetime(2024, 1, 1),
+            "$lte": datetime(2024, 11, 5)
+        }
+    }))
+
+    # Extract specific metrics for plotting with safe default values
+    dates = [entry["date"].strftime("%Y-%m") for entry in data]
+    unemployment_rates = [entry.get("calgary_cer_unemployment_rate", 0) for entry in data]
+    employment_changes = [entry.get("calgary_cer_total_employment_month_over_month_change_000_persons", 0) for entry in data]
+    wage_rates = [entry.get("calgary_cma_average_hourly_wage_rate", 0) for entry in data]
+
+    # Plotting unemployment rate
+    plt.figure(figsize=(10, 6))
+    plt.bar(dates, unemployment_rates, color='skyblue')
+    plt.title("Calgary Unemployment Rate (Jan 2024 - Nov 2024)")
+    plt.xlabel("Date")
+    plt.ylabel("Unemployment Rate (%)")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig("calgary_economic_statistics.png")
+
+    # Plotting employment change
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, employment_changes, marker='o', color='orange')
+    plt.title("Calgary Employment Change (Month-over-Month) Jan 2024 - Nov 2024")
+    plt.xlabel("Date")
+    plt.ylabel("Employment Change (000 persons)")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig("calgary_housing_growth_rates.png")
+
+    # Plotting average hourly wage rate
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, wage_rates, marker='x', color='green')
+    plt.title("Calgary Average Hourly Wage Rate (Jan 2024 - Nov 2024)")
+    plt.xlabel("Date")
+    plt.ylabel("Average Hourly Wage Rate ($)")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig("calgary_wage_rate.png")
+
+    return {"message": "Data analysis and visualizations completed"}
+
+# Run FastAPI app with Uvicorn
+# Command to run: uvicorn <filename>:app --reload
