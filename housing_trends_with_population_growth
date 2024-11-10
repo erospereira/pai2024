@@ -1,0 +1,75 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Updated sample demographic data with specified counts
+data_samples = [
+    {
+        "Growth_Rate": 5.5,
+        "Number_of_Houses": 1000,
+        "Occupied_Houses": 500,
+        "Population": 10000,
+        "Single_Detached_House": 1000,
+        "Semi_Detached_House": 2000,
+        "Row_House": 5000,
+        "Apartment_in_Duplex": 10000,
+        "Apartment_Fewer_than_5_Storeys": 50000,
+        "Apartment_Five_or_More_Storeys": 100000,
+        "Other_Single_Attached_House": 200000,
+        "Movable_Dwelling": 500000
+    },
+    {
+        "Growth_Rate": 6.0,
+        "Number_of_Houses": 2000,
+        "Occupied_Houses": 1000,
+        "Population": 20000,
+        "Single_Detached_House": 2000,
+        "Semi_Detached_House": 5000,
+        "Row_House": 10000,
+        "Apartment_in_Duplex": 50000,
+        "Apartment_Fewer_than_5_Storeys": 100000,
+        "Apartment_Five_or_More_Storeys": 200000,
+        "Other_Single_Attached_House": 500000,
+        "Movable_Dwelling": 550000
+    },
+    {
+        "Growth_Rate": 6.5,
+        "Number_of_Houses": 5000,
+        "Occupied_Houses": 2500,
+        "Population": 50000,
+        "Single_Detached_House": 5000,
+        "Semi_Detached_House": 10000,
+        "Row_House": 50000,
+        "Apartment_in_Duplex": 100000,
+        "Apartment_Fewer_than_5_Storeys": 200000,
+        "Apartment_Five_or_More_Storeys": 500000,
+        "Other_Single_Attached_House": 550000,
+        "Movable_Dwelling": 1000
+    }
+]
+
+# Convert data to DataFrame
+df = pd.DataFrame(data_samples)
+
+# Plot each Growth Rate as a separate bar chart for the specified counts
+plt.figure(figsize=(12, 8))
+
+for i, growth_rate in enumerate(df['Growth_Rate'].unique()):
+    subset = df[df['Growth_Rate'] == growth_rate]
+    housing_types = [
+        "Single_Detached_House", "Semi_Detached_House", "Row_House",
+        "Apartment_in_Duplex", "Apartment_Fewer_than_5_Storeys",
+        "Apartment_Five_or_More_Storeys", "Other_Single_Attached_House",
+        "Movable_Dwelling"
+    ]
+    housing_counts = [subset.iloc[0][type_] for type_ in housing_types]
+
+    plt.subplot(3, 1, i+1)
+    plt.bar(housing_types, housing_counts)
+    plt.title(f"Housing Types in Calgary (Growth Rate: {growth_rate}%)")
+    plt.xlabel("Housing Type")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45)
+
+plt.tight_layout()
+plt.savefig("calgary_housing_growth_rates.png")
+plt.show()
