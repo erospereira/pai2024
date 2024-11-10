@@ -1,0 +1,33 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Provided data for the plot
+data = {
+    'total_pop_household': 1291790.0,
+    'pop_age_0_to_14': 235540.0,
+    'pop_age_15_to_64': 888985.0,
+    'pop_age_65_to_84': 152425.0,
+    'pop_age_85_and_over': 14845.0,
+    'pop_age_0_to_14_percent': 18.0,
+    'pop_age_15_to_64_percent': 69.0,
+    'pop_age_65_to_84_percent': 12.0,
+    'pop_age_85_and_over_percent': 1.0
+}
+
+# Age categories and their corresponding percentages
+age_categories = ['0 to 14', '15 to 64', '65 to 84', '85 and over']
+percentages = [
+    data['pop_age_0_to_14_percent'],
+    data['pop_age_15_to_64_percent'],
+    data['pop_age_65_to_84_percent'],
+    data['pop_age_85_and_over_percent']
+]
+
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.bar(age_categories, percentages, color=['skyblue', 'salmon', 'lightgreen', 'violet'])
+plt.xlabel('Age Category')
+plt.ylabel('Percentage of Total Population')
+plt.title('Population Age Distribution by Percentage')
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
