@@ -1,0 +1,61 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample data structure with historical crime counts for different areas (replace with actual data)
+crime_data = pd.DataFrame({
+    'Year': [2018, 2019, 2020, 2021, 2022, 2023, 2024],
+    'Downtown': [300, 320, 340, 360, 380, 370, 365],
+    'Northeast': [150, 160, 170, 180, 185, 175, 172],
+    'Southwest': [200, 210, 220, 230, 240, 235, 230],
+    'Northwest': [100, 105, 110, 115, 120, 118, 116],
+    'Southeast': [80, 85, 90, 95, 100, 98, 97]
+})
+
+# Define the future year for prediction
+future_year = 2025
+
+# Initialize dictionary to store predictions
+predictions = {}
+
+# Loop through each area and apply linear regression to predict future crime counts
+for area in crime_data.columns[1:]:  # Skip 'Year' column
+    X = crime_data[['Year']]
+    y = crime_data[area]
+    
+    # Split data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    
+    # Train the linear regression model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    
+    # Predict the crime count for the future year
+    future_prediction = model.predict([[future_year]])
+    predictions[area] = future_prediction[0]
+    
+    # Print model performance (optional)
+    y_pred = model.predict(X_test)
+    print(f"{area} - MSE:", mean_squared_error(y_test, y_pred))
+
+# Display predictions for each area for the year 2025
+print("\nPredicted Crime Counts by Area for 2025:")
+for area, count in predictions.items():
+    print(f"{area}: {count:.2f}")
+
+# Visualization of predictions with historical data
+plt.figure(figsize=(12, 8))
+
+# Plot historical data and the predicted point for each area
+for area in crime_data.columns[1:]:
+    plt.plot(crime_data['Year'], crime_data[area], marker='o', label=area)
+    plt.scatter([future_year], [predictions[area]], color='red')  # Mark prediction with a red dot
+
+plt.xlabel('Year')
+plt.ylabel('Crime Count')
+plt.title('Calgary Crime Data by Area and Predictions for 2025')
+plt.legend()
+plt.show()
