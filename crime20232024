@@ -1,0 +1,68 @@
+from fastapi import FastAPI
+from pymongo import MongoClient
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+import json
+
+# Initialize FastAPI and MongoDB client
+app = FastAPI()
+client = MongoClient("mongodb+srv://per18044:mEANFqihdP9BPGwt@cluster0.oowe8qv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+db = client["calgary_crime"]
+collection = db["crime_data"]
+
+# Endpoint to insert data into MongoDB from JSON files
+@app.post("/insert_data")
+def insert_data():
+    # Load data from JSON files for 2023 and 2024
+    with open(r"C:\Users\erosp\OneDrive\Desktop\Working\crime2023.py") as file_2023, \
+     open(r"C:\Users\erosp\OneDrive\Desktop\Working\crime2024.py") as file_2024:
+    # Your code to process the files
+
+        data_2023 = json.load(file_2023)
+        data_2024 = json.load(file_2024)
+        
+    # Insert or update each entry into MongoDB
+    for entry in data_2023 + data_2024:
+        collection.update_one(
+            {"category": entry["category"], "year": entry["year"], "month": entry["month"]},
+            {"$set": entry},
+            upsert=True
+        )
+    return {"message": "Data for 2023 and 2024 inserted successfully"}
+
+# Endpoint to analyze data and generate category-wise plots
+@app.get("/analyze_data")
+def analyze_data():
+    # Fetch all data
+    data = list(collection.find({}))
+    
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+
+    # Plot crime trends by category for 2023 and 2024
+    categories = df['category'].unique()
+    for category in categories:
+        category_data = df[df['category'] == category]
+        category_data_2023 = category_data[category_data['year'] == 2023].sort_values(by="month")
+        category_data_2024 = category_data[category_data['year'] == 2024].sort_values(by="month")
+
+        # Plot for each category
+        plt.figure(figsize=(10, 6))
+        plt.plot(category_data_2023['month'], category_data_2023['crime_count'], marker='o', color='blue', label='2023')
+        plt.plot(category_data_2024['month'], category_data_2024['crime_count'], marker='x', color='red', label='2024')
+        
+        plt.title(f"Crime Trends for {category} (2023 vs 2024)")
+        plt.xlabel("Month")
+        plt.ylabel("Crime Count")
+        plt.xticks(range(1, 13))
+        plt.legend()
+        plt.tight_layout()
+        
+        # Save plot as an image file
+        plt.savefig(f"{category.replace(' ', '_').replace('/', '_')}_2023_2024_trends.png")
+
+    return {"message": "Data analysis and visualizations completed"}
+
+# Command to run the FastAPI app
+# Run this in the terminal: uvicorn <filename>:app --reload
