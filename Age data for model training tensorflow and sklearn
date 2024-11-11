@@ -1,0 +1,73 @@
+import urllib.request
+import json
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+
+API_URL = 'https://data.calgary.ca/resource/fm6w-acnx.json'
+
+def fetch_population_data(api_url):
+    try:
+        with urllib.request.urlopen(api_url) as response:
+            if response.status != 200:
+                print(f"Error: HTTP status code {response.status}")
+                return None
+            contents = response.read().decode(response.headers.get_content_charset() or 'utf-8')
+            if not contents.strip():
+                print("Error: Received empty response from the server")
+                return None
+            data = json.loads(contents)
+            return data
+    except Exception as e:
+        print("Error fetching data:", e)
+    return None
+
+def preprocess_data(data):
+    df = pd.DataFrame(data)
+    print("Data Columns:", df.columns)  # Debugging: list all columns
+
+    # Ensure critical columns exist; else, add dummy data for testing
+    required_columns = ['total_pop_household', 'pop_age_0_to_14', 'pop_age_15_to_64', 'pop_age_65_to_84']
+    for col in required_columns:
+        if col not in df.columns:
+            print(f"Adding missing column: {col} with dummy data.")
+            df[col] = 0  # Assign dummy data as zeros if the column is missing
+
+    # Convert columns to numeric, handling errors
+    for col in required_columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # Drop rows with NaN values in critical columns
+    df.dropna(subset=required_columns, inplace=True)
+
+    # Split into features and target
+    features = df.drop(columns=['total_pop_household'], errors='ignore')
+    target = df['total_pop_household']
+
+    # Select only numeric columns for scaling
+    numeric_features = features.select_dtypes(include='number')
+    if numeric_features.empty:
+        print("No numeric columns found in features for scaling.")
+        return None
+
+    # Scaling numeric features
+    scaler = StandardScaler()
+    scaled_features = pd.DataFrame(scaler.fit_transform(numeric_features), columns=numeric_features.columns)
+    return scaled_features, target
+
+data = fetch_population_data(API_URL)
+
+if data:
+    print("Data successfully retrieved.")
+    processed_data = preprocess_data(data)
+    
+    if processed_data:
+        features, target = processed_data
+        print("Features and target prepared for model training.")
+    else:
+        print("Data preprocessing failed.")
+else:
+    print("Failed to retrieve data.")
