@@ -1,0 +1,83 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import mean_squared_error, classification_report
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample data for housing trends and crime patterns (replace with actual data loading)
+housing_data = pd.DataFrame({
+    'Year': [2021, 2022, 2023, 2024],
+    'Average_Housing_Price': [500000, 520000, 530000, 540000],
+    'Population': [1306784, 1320000, 1340000, 1360000],
+    'Migration': [20000, 25000, 23000, 22000],
+    'Rental_Market': [1500, 1600, 1695, 1830]
+})
+
+crime_data = pd.DataFrame({
+    'Year': [2021, 2022, 2023, 2024],
+    'Crime_Type': ['Theft', 'Assault', 'Robbery', 'Theft'],
+    'Neighborhood': ['Downtown', 'Suburb', 'Downtown', 'Suburb'],
+    'Incidents': [80, 90, 85, 75]
+})
+
+# ---- Housing Price Prediction Model ----
+# Prepare data for regression model
+X_housing = housing_data[['Population', 'Migration', 'Rental_Market']]
+y_housing = housing_data['Average_Housing_Price']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X_housing, y_housing, test_size=0.2, random_state=0)
+
+# Train regression model
+housing_model = LinearRegression()
+housing_model.fit(X_train, y_train)
+
+# Predict future housing prices
+future_population = 1380000
+future_migration = 21000
+future_rental_market = 1700
+future_price = housing_model.predict([[future_population, future_migration, future_rental_market]])
+print("Predicted future housing price:", future_price[0])
+
+# ---- Crime Risk Prediction Model ----
+# Define high-risk neighborhoods based on incident threshold
+crime_data['High_Risk'] = np.where(crime_data['Incidents'] > 80, 1, 0)
+X_crime = crime_data[['Year']]  # Additional features can be added if available
+y_crime = crime_data['High_Risk']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X_crime, y_crime, test_size=0.2, random_state=0)
+
+# Train classification model
+crime_model = LogisticRegression()
+crime_model.fit(X_train, y_train)
+
+# Predict risk level for future year
+future_year = 2025
+predicted_risk = crime_model.predict([[future_year]])
+print("Predicted risk level for the neighborhood:", "High" if predicted_risk[0] == 1 else "Low")
+
+# Classification report for model evaluation
+y_pred = crime_model.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+# ---- Visualization ----
+# Visualize housing price trends
+plt.figure(figsize=(10, 5))
+plt.plot(housing_data['Year'], housing_data['Average_Housing_Price'], marker='o', label='Historical Prices')
+plt.scatter([2025], future_price, color='red', label='Predicted Price')
+plt.xlabel('Year')
+plt.ylabel('Average Housing Price')
+plt.title('Housing Price Trends')
+plt.legend()
+plt.show()
+
+# Visualize crime trends
+plt.figure(figsize=(10, 5))
+plt.bar(crime_data['Year'], crime_data['Incidents'], color='blue', label='Incidents')
+plt.xlabel('Year')
+plt.ylabel('Incidents Count')
+plt.title('Crime Trends by Year')
+plt.legend()
+plt.show()
