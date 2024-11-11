@@ -1,0 +1,65 @@
+import urllib.request
+from datetime import datetime
+import json
+import matplotlib.pyplot as plt
+import calendar
+
+API_URL = 'https://data.calgary.ca/resource/vxxi-pm4v.json'
+CURR_YR = datetime.now().year
+API_WHERE = "$where=date>='"+str(CURR_YR)+"-01"+"'"
+URL = API_URL + "?" + API_WHERE
+contents = urllib.request.urlopen(URL)
+data = json.loads(contents.read().decode(contents.headers.get_content_charset()))
+data.sort(key=lambda x: x['date'], reverse=False)
+
+
+
+dates = [calendar.month_name[int(x['date'][-2:])][:3] for x in data]
+unemployment = [float(x['calgary_cer_unemployment_rate']) * 100 for x in data]
+hrWage = [float(x['calgary_cma_average_hourly_wage_rate']) for x in data]
+resVal = [float(x['city_of_calgary_building_permits_residential_value'])/1000000000  for x in data]
+nonResVal = [float(x['city_of_calgary_building_permits_non_residential_value']) * 100 for x in data]
+housingStarts = [float(x.get('calgary_city_total_housing_starts_units', 0)) * 100 for x in data]
+cmaHousingStarts = [float(x.get('calgary_cma_total_housing_starts_units', 0)) * 100 for x in data]
+reatilSales = [float(x.get('calgary_cer_retail_sales_billions', 0))/1000000000 for x in data]
+inflation = [float(x['calgary_cma_inflation_rate_change']) * 100 for x in data]
+
+plt.ylabel('Unemployment Rate (%)')
+plt.xlabel(CURR_YR)
+plt.plot(dates, unemployment)
+plt.show()
+
+plt.ylabel('Average Hourly Wage $')
+plt.xlabel(CURR_YR)
+plt.plot(dates, hrWage)
+plt.show()
+
+plt.ylabel('Building Permits Residential Value (billion $)')
+plt.xlabel(CURR_YR)
+plt.plot(dates, resVal)
+plt.show()
+
+plt.ylabel('Building Permits Non Residential Value (billion $)')
+plt.xlabel(CURR_YR)
+plt.plot(dates, nonResVal)
+plt.show()
+
+plt.ylabel('Total Housing Starts Units')
+plt.xlabel(CURR_YR)
+plt.plot(dates, housingStarts)
+plt.show()
+
+plt.ylabel('CMA Total Housing Starts Units')
+plt.xlabel(CURR_YR)
+plt.plot(dates, cmaHousingStarts)
+plt.show()
+
+plt.ylabel('Retail Sales Value (billion $)')
+plt.xlabel(CURR_YR)
+plt.plot(dates, reatilSales)
+plt.show()
+
+plt.ylabel('Inflation Ratge Change')
+plt.xlabel(CURR_YR)
+plt.plot(dates,inflation )
+plt.show()
