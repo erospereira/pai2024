@@ -1,0 +1,62 @@
+import spacy
+import pandas as pd
+from textblob import TextBlob
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load English NLP model from SpaCy
+nlp = spacy.load("en_core_web_sm")
+
+# Sample data: replace with actual data gathering from social media, forums, or survey
+data = {
+    "Date": ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05"],
+    "Post": [
+        "Housing prices are skyrocketing in Calgary, hard to afford!",
+        "The crime rate seems to be decreasing in downtown areas.",
+        "I feel safe in my neighborhood but housing is still expensive.",
+        "Inflation is impacting everything, especially rent.",
+        "Great to see housing projects expanding in Southeast Calgary."
+    ]
+}
+
+# Create DataFrame
+df = pd.DataFrame(data)
+
+# Function to analyze sentiment using TextBlob
+def analyze_sentiment(text):
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    if polarity > 0:
+        return "Positive"
+    elif polarity < 0:
+        return "Negative"
+    else:
+        return "Neutral"
+
+# Apply sentiment analysis
+df["Sentiment"] = df["Post"].apply(analyze_sentiment)
+
+# Convert date to datetime format for time-based analysis
+df["Date"] = pd.to_datetime(df["Date"])
+
+# Visualization: Sentiment over time
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, x="Date", hue="Sentiment", palette="viridis")
+plt.title("Public Sentiment on Calgary Housing, Safety, and Economics Over Time")
+plt.xlabel("Date")
+plt.ylabel("Count of Sentiments")
+plt.legend(title="Sentiment")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Example of more advanced analysis with NLP (topic extraction)
+def extract_topics(text):
+    doc = nlp(text)
+    topics = [chunk.text for chunk in doc.noun_chunks if "housing" in chunk.text or "safety" in chunk.text or "economics" in chunk.text]
+    return topics
+
+df["Topics"] = df["Post"].apply(extract_topics)
+
+# Display analyzed data
+print(df)
