@@ -1,0 +1,85 @@
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+from pymongo import MongoClient
+from fastapi import FastAPI
+from bson import json_util
+import json
+import uvicorn
+
+# Set up FastAPI application
+app = FastAPI()
+
+# Define the API key and MongoDB connection details
+API_KEY = "20d2f4f31892431b9e51d9721da17518"
+MONGO_URI = "mongodb+srv://per18044:mEANFqihdP9BPGwt@cluster0.oowe8qv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+DB_NAME = "calgary_analysis"
+COLLECTION_NAME = "articles"
+
+# Step 1: Fetch data from the API
+def fetch_news_data(api_key, query="Calgary"):
+    url = f"https://newsapi.org/v2/everything?q={query}&apiKey={api_key}"
+    response = requests.get(url)
+    if response.status_code != 200:
+        print("Failed to fetch data")
+        return None
+    return response.json().get('articles', [])
+
+# Step 2: Analyze data, visualize trends, and save to CSV
+def analyze_and_visualize(data):
+    # Load data into a DataFrame
+    df = pd.DataFrame(data)
+    df = df[['title', 'publishedAt', 'source', 'url']]  # Keep relevant columns
+    df['publishedAt'] = pd.to_datetime(df['publishedAt'])  # Convert dates
+
+    # Group by month and count articles
+    df['month'] = df['publishedAt'].dt.to_period('M').astype(str)
+    monthly_counts = df.groupby('month').size()
+
+    # Save monthly counts to CSV
+    monthly_counts.to_csv("calgary_monthly_trends.csv")
+    print("Monthly trends saved to calgary_monthly_trends.csv")
+
+    # Plot the monthly trends with Matplotlib
+    plt.figure(figsize=(10, 5))
+    monthly_counts.plot(kind='line', marker='o', title="Monthly Article Counts for Calgary")
+    plt.xlabel("Month")
+    plt.ylabel("Number of Articles")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig("monthly_trends_plot.png")  # Save the plot as an image
+    plt.show()
+
+    return df  # Return DataFrame for MongoDB storage
+
+# Step 3: Store data in MongoDB
+def store_in_mongodb(df):
+    df['publishedAt'] = df['publishedAt'].astype(str)
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    collection = db[COLLECTION_NAME]
+    collection.insert_many(df.to_dict('records'))
+    print("Data stored in MongoDB")
+
+# FastAPI route to access MongoDB data
+@app.get("/calgary/trends")
+def get_calgary_trends():
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    collection = db[COLLECTION_NAME]
+    articles = list(collection.find({}, {"_id": 0}))
+    return json.loads(json_util.dumps(articles))
+
+# Main function to execute steps
+if __name__ == "__main__":
+    # Step 1: Fetch data
+    data = fetch_news_data(API_KEY)
+    if data:
+        # Step 2: Analyze, visualize, and save to CSV
+        df = analyze_and_visualize(data)
+
+        # Step 3: Store in MongoDB
+        store_in_mongodb(df)
+
+        # Step 4: Run FastAPI
+        uvicorn.run(app, host="0.0.0.0", port=8000)
